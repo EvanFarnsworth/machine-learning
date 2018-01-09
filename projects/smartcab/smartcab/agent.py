@@ -9,7 +9,7 @@ class LearningAgent(Agent):
     """ An agent that learns to drive in the Smartcab world.
         This is the object you will be modifying. """ 
 
-    def __init__(self, env, learning=True, epsilon=1.0, alpha=0.7):
+    def __init__(self, env, learning=True, epsilon=1.0, alpha=0.2):
         super(LearningAgent, self).__init__(env)     # Set the agent in the evironment 
         self.planner = RoutePlanner(self.env, self)  # Create a route planner
         self.valid_actions = self.env.valid_actions  # The set of valid actions
@@ -25,7 +25,8 @@ class LearningAgent(Agent):
         ## TO DO ##
         ###########
         # Set any additional class parameters as needed
-        self.t = 0
+
+        self.t = 0.0
     
     def reset(self, destination=None, testing=False):
         """ The reset function is called at the beginning of each trial.
@@ -47,19 +48,20 @@ class LearningAgent(Agent):
             epsilon = 0.0
             alpha = 0.0
         else:
-            self.t += 1
+            self.t += 1.0
             # Initial decay 
             #self.epsilon = self.epsilon - 0.05
             #squared decay
             #self.epsilon = 1.0 / (float(self.t)**1.6)
             #cosine decay
             #self.alpha -= 0.005
-            if self.alpha <= 0.0:
-                exit()
-            self.epsilon = math.fabs(math.cos(self.alpha * self.t))
-            #exp decay
-            #alpha of 0.15 and tolerance of 0.01 worked nice
-            #self.epsilon = math.exp(-(self.alpha * self.t))
+            #self.epsilon = math.fabs(math.cos(self.alpha * self.t))
+            #Gompertz exp decay
+            c = 0.01
+            b = -0.05
+            self.epsilon = math.exp(b * math.exp(c * self.t))
+            # log decay
+            #self.epsilon = math.log(math.exp(-self.t))
             #power decay
             #self.epsilon = self.alpha**self.t 
             
@@ -148,14 +150,8 @@ class LearningAgent(Agent):
                         maxQ = self.Q[state][qVal]
                 
                 #find all Q values equal to best
-                actionList = [bestAction]
-                for qVal in self.Q[state]:
-                    if self.Q[state][qVal] == maxQ and qVal != bestAction:
-                        actionList.append(qVal)
-
-                #select randomly if Q values are equal (tied)
-                bestAction = random.choice(actionList)
-                action = bestAction
+                best_actions = [action for action in self.valid_actions if self.Q[state][action] == max(self.Q[state].values())]
+                action = random.choice(best_actions)
         else:
             action = random.choice(self.valid_actions)
        
@@ -166,17 +162,22 @@ class LearningAgent(Agent):
         """ The learn function is called after the agent completes an action and
             receives a reward. This function does not consider future rewards 
             when conducting learning. """
+        if not self.learning:
+            return
 
         ########### 
         ## TO DO ##
         ###########
         # When learning, implement the value iteration update rule
         #   Use only the learning rate 'alpha' (do not use the discount factor 'gamma')
-        self.Q[state][action] = self.Q[state][action] + reward * self.alpha
+        self.Q[state][action] = self.Q[state][action] + self.alpha*(reward-self.Q[state][action])
         return
 
 
     def update(self):
+        if not self.learning:
+            return
+
         """ The update function is called when a time step is completed in the 
             environment for a given trial. This function will build the agent
             state, choose an action, receive a reward, and learn if enabled. """
@@ -229,7 +230,7 @@ def run():
     # Flags:
     #   tolerance  - epsilon tolerance before beginning testing, default is 0.05 
     #   n_test     - discrete number of testing trials to perform, default is 0
-    sim.run(n_test = 20, tolerance=0.001)
+    sim.run(n_test = 100, tolerance=0.001)
 
 
 if __name__ == '__main__':

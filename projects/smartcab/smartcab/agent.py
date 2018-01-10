@@ -9,7 +9,7 @@ class LearningAgent(Agent):
     """ An agent that learns to drive in the Smartcab world.
         This is the object you will be modifying. """ 
 
-    def __init__(self, env, learning=True, epsilon=1.0, alpha=0.2):
+    def __init__(self, env, learning=True, epsilon=1.0, alpha=0.6):
         super(LearningAgent, self).__init__(env)     # Set the agent in the evironment 
         self.planner = RoutePlanner(self.env, self)  # Create a route planner
         self.valid_actions = self.env.valid_actions  # The set of valid actions
@@ -51,19 +51,10 @@ class LearningAgent(Agent):
             self.t += 1.0
             # Initial decay 
             #self.epsilon = self.epsilon - 0.05
-            #squared decay
-            #self.epsilon = 1.0 / (float(self.t)**1.6)
-            #cosine decay
-            #self.alpha -= 0.005
-            #self.epsilon = math.fabs(math.cos(self.alpha * self.t))
             #Gompertz exp decay
-            c = 0.01
+            c = 0.004
             b = -0.05
             self.epsilon = math.exp(b * math.exp(c * self.t))
-            # log decay
-            #self.epsilon = math.log(math.exp(-self.t))
-            #power decay
-            #self.epsilon = self.alpha**self.t 
             
         return None
 
@@ -100,13 +91,7 @@ class LearningAgent(Agent):
         ## TO DO ##
         ###########
         # Calculate the maximum Q-value of all actions for a given state
-
-        maxQ = -100
-        for action in self.Q[state]:
-            if maxQ < self.Q[state][action]:
-                maxQ = self.Q[state][action]
-
-        return maxQ 
+        return max(self.Q[state].values())
 
 
     def createQ(self, state):
@@ -141,14 +126,6 @@ class LearningAgent(Agent):
             if self.epsilon > 0.0 and self.epsilon > random.random():
                 action = random.choice(self.valid_actions)
             else:
-                maxQ = -1000.0
-                bestAction = None
-                #find best Q value
-                for qVal in self.Q[state]:
-                    if self.Q[state][qVal] > maxQ:
-                        bestAction = qVal
-                        maxQ = self.Q[state][qVal]
-                
                 #find all Q values equal to best
                 best_actions = [action for action in self.valid_actions if self.Q[state][action] == max(self.Q[state].values())]
                 action = random.choice(best_actions)
@@ -175,8 +152,7 @@ class LearningAgent(Agent):
 
 
     def update(self):
-        if not self.learning:
-            return
+        
 
         """ The update function is called when a time step is completed in the 
             environment for a given trial. This function will build the agent
